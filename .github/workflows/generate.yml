@@ -107,6 +107,10 @@ jobs:
       - name: Check for changes and determine action
         id: changes
         run: |
+          # Show what files have changed for debugging
+          echo "Git status:"
+          git status --porcelain
+          
           if [[ -z $(git status --porcelain) ]]; then
             echo "change_type=none" >> $GITHUB_OUTPUT
             echo "No changes detected"
@@ -121,14 +125,26 @@ jobs:
       - name: Commit and push changes
         if: steps.changes.outputs.change_type != 'none'
         run: |
-          git add ./data/
+          # Add all generated files explicitly
+          git add data/ephemeral/gen_schema_ephemerals.json
+          git add data/write-only/gen_write_only.json
+          git add data/ephemerality.json
+          
+          # Show what we're about to commit
+          echo "Files to be committed:"
+          git diff --cached --name-only
+          
           git commit -m "robot: update list of ephemeral resources
           
           - Generated ephemeral resources: $(jq '.ephemeral | length' data/ephemerality.json) entries
           - Manual resources: $(jq '.resources | length' data/ephemerality.json) entries  
           - Generated write-only resources: $(jq '.write_only | keys | length' data/ephemerality.json) entries
           - Change type: ${{ steps.changes.outputs.change_type }}
-          - Combined into ephemerality.json"
+          
+          Files updated:
+          - data/ephemeral/gen_schema_ephemerals.json
+          - data/write-only/gen_write_only.json
+          - data/ephemerality.json (combined)"
           git push
 
       - name: Create Pull Request
