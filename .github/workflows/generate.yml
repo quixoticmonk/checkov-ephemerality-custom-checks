@@ -34,16 +34,6 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Cache Terraform providers
-        uses: actions/cache@v4
-        with:
-          path: |
-            generators/ephemeral_resources/.terraform
-            generators/ephemeral_resources/.terraform.lock.hcl
-          key: terraform-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('generators/ephemeral_resources/providers.tf') }}
-          restore-keys: |
-            terraform-${{ env.TERRAFORM_VERSION }}-
-
       - name: Setup Git configuration
         run: |
           git config user.name "github-actions[bot]"
