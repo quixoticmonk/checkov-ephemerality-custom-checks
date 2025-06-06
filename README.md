@@ -14,25 +14,18 @@ The Checkov custom checks includes three main categories of checks:
 
 ## Checks Included
 
-### CKV2_EPH_CREATE - Prefer Ephemeral Resources for Creation
+* CKV2_EPH_CREATE - Prefer Ephemeral Resources for Creation
 Identifies Terraform resources that create ephemeral data (like secrets, tokens, or temporary credentials) and suggests using ephemeral data sources instead. This helps reduce state file exposure and improves security posture.
 
-### CKV2_EPH_RET - Prefer Ephemeral Resources for Retrieval  
+* CKV2_EPH_RET - Prefer Ephemeral Resources for Retrieval  
 Detects data sources that retrieve sensitive or temporary information and recommends marking them as ephemeral to prevent storage in state files.
 
-### CKV2_EPH_WO - Prefer Write-Only Attributes
+* CKV2_EPH_WO - Prefer Write-Only Attributes
 Flags sensitive resource attributes that should be configured as write-only to prevent them from being stored in or read from the Terraform state file.
 
 ## Usage
 
 ### Running All Custom Checks
-Use the provided script to run all ephemerality checks:
-
-```bash
-./run-custom-checks.sh
-```
-
-### Running with Checkov Directly
 You can also run the checks directly with Checkov:
 
 ```bash
@@ -52,34 +45,6 @@ checkov --external-checks-dir ./checks --directory ./tests --check CKV2_EPH_CREA
 
 # Run only write-only attribute checks  
 checkov --external-checks-dir ./checks --directory ./tests --check CKV2_EPH_WO
-```
-
-## Project Structure
-
-```
-├── .github/workflows/          # GitHub Actions workflows
-│   └── generate.yml               # Automated resource generation workflow
-├── checks/                     # Custom Checkov policy implementations
-│   ├── PreferEphemeralCreates.py    # CKV2_EPH_CREATE implementation
-│   ├── PreferEphemeralRetrieves.py  # CKV2_EPH_RET implementation
-│   ├── PreferWriteOnlyAttributes.py # CKV2_EPH_WO implementation
-│   ├── data_loader.py               # Shared data loading utilities
-│   ├── __init__.py                  # Python package initialization
-│   └── README.md                    # Detailed check documentation
-├── data/                       # Policy configuration data
-│   ├── ephemerality.json           # Combined resource classifications (generated)
-│   ├── ephemeral/                  # Ephemeral resource definitions
-│   │   ├── gen_schema_ephemerals.json  # Auto-generated ephemeral resources
-│   │   └── manual_resources.json       # Manually curated resources
-│   └── write-only/                 # Write-only attribute definitions
-│       └── gen_write_only.json         # Auto-generated write-only attributes
-├── generators/                 # Resource generation utilities
-│   └── ephemeral_resources/        # Terraform configuration for generation
-│       ├── providers.tf                # Provider configurations
-│       └── README.md                   # Generation documentation
-├── tests/                      # Test Terraform configurations
-├── docs/                       # Documentation
-└── run-custom-checks.sh        # Convenience script for running checks
 ```
 
 ## Configuration
@@ -112,21 +77,21 @@ This repository includes an automated workflow that:
 ### Manual Workflow Trigger
 You can manually trigger the generation workflow from the GitHub Actions tab or using the GitHub CLI:
 
-```bash
-gh workflow run generate.yml
-```
-
 ## Requirements
 
-- Python 3.7+
 - Checkov
 - Terraform (for testing and generation)
 
-## Installation
+## Usage
 
 1. Clone this repository
 2. Install Checkov: `pip install checkov`
-3. Run the checks using the provided script or Checkov directly
+3. Run the checks using Checkov with the either `--external-checks-dir`.
+
+Or
+
+1. Run the checks using Checkov with the flag `--external-checks-git`. Use the checks reference since the examples in this main branch might lead to checkov identifying them as part of your configuration.
+
 
 ## Contributing
 
@@ -142,8 +107,4 @@ The `ephemerality.json` file is automatically regenerated, so don't edit it dire
 
 ## Credits
 
-This Checkov custom checks is inspired by and builds upon the work from [drewmullen/policy-library-ephemerality](https://github.com/drewmullen/policy-library-ephemerality). Special thanks to Drew Mullen for the foundational concepts and approach to ephemerality in Terraform configurations.
-
-## License
-
-This project follows the same licensing terms as the original work it's based upon.
+This Checkov custom checks is inspired by and builds upon the work from [drewmullen/policy-library-ephemerality](https://github.com/drewmullen/policy-library-ephemerality). Special thanks to Drew  for the foundational concepts and approach to this.
