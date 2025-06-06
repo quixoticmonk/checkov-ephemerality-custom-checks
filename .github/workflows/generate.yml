@@ -25,14 +25,24 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch full history for better git operations
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ffe269b29dd # v3.1.2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: |
+            generators/ephemeral_resources/.terraform
+            generators/ephemeral_resources/.terraform.lock.hcl
+          key: terraform-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('generators/ephemeral_resources/providers.tf') }}
+          restore-keys: |
+            terraform-${{ env.TERRAFORM_VERSION }}-
 
       - name: Setup Git configuration
         run: |
