@@ -1,0 +1,7 @@
+{
+    "resources": [
+        "tfe_team_token",
+        "tls_private_key",
+        "random_password"
+    ]
+}

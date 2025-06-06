@@ -1,0 +1,28 @@
+version: 2
+
+updates:
+  # GitHub Actions dependencies
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "⬆️"
+      include: scope
+
+  # Terraform dependencies
+  - package-ecosystem: terraform
+    directory: /generators/ephemeral_resources
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - terraform
+    commit-message:
+      prefix: "⬆️"
+      include: scope

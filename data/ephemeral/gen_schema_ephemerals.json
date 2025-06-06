@@ -1,0 +1,26 @@
+{
+  "ephemeral": [
+    "aws_cognito_identity_openid_token_for_developer_identity",
+    "aws_eks_cluster_auth",
+    "aws_kms_secrets",
+    "aws_lambda_invocation",
+    "aws_secretsmanager_random_password",
+    "aws_secretsmanager_secret_version",
+    "aws_ssm_parameter",
+    "azurerm_key_vault_certificate",
+    "azurerm_key_vault_secret",
+    "google_service_account_access_token",
+    "google_service_account_id_token",
+    "google_service_account_jwt",
+    "google_service_account_key",
+    "random_password",
+    "tfe_agent_token",
+    "tfe_audit_trail_token",
+    "tfe_organization_token",
+    "tfe_outputs",
+    "tfe_team_token",
+    "tls_private_key",
+    "vault_database_secret",
+    "vault_kv_secret_v2"
+  ]
+}

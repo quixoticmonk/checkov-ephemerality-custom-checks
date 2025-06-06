@@ -1,0 +1,167 @@
+name: Generate
+
+on:
+  schedule:
+     # Trigger the workflow every day at 4:00 UTC.
+     - cron: '0 4 * * *'
+  push:
+    branches:
+      - main
+    paths:  
+      - "generators/ephemeral_resources/providers.tf"
+  workflow_dispatch: # Allow manual triggering
+    
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  TERRAFORM_VERSION: "1.11.0"
+  BRANCH_PREFIX: "generate-ephemeral-resources"
+
+jobs:
+  ephemeral-resources:
+    name: Ephemeral Resources
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # Fetch full history for better git operations
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ffe269b29dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Cache Terraform providers
+        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        with:
+          path: |
+            generators/ephemeral_resources/.terraform
+            generators/ephemeral_resources/.terraform.lock.hcl
+          key: terraform-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('generators/ephemeral_resources/providers.tf') }}
+          restore-keys: |
+            terraform-${{ env.TERRAFORM_VERSION }}-
+
+      - name: Setup Git configuration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and switch to feature branch
+        id: branch
+        run: |
+          BRANCH_NAME="${{ env.BRANCH_PREFIX }}-${{ github.run_id }}"
+          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          git checkout -b "${BRANCH_NAME}"
+          git push -u origin "${BRANCH_NAME}"
+
+      - name: Initialize Terraform
+        working-directory: generators/ephemeral_resources
+        run: terraform init
+
+      - name: Generate ephemeral and write-only resources
+        working-directory: generators/ephemeral_resources
+        run: |
+          echo "Generating ephemeral resources from providers..."
+          terraform providers schema -json | \
+            jq '{"ephemeral": [.provider_schemas | to_entries[] | .value.ephemeral_resource_schemas? | select(.) | keys[] ]}' \
+            > ../../data/ephemeral/gen_schema_ephemerals.json
+          
+          echo "Generating write-only resources from providers..."
+          terraform providers schema -json | \
+            jq '.provider_schemas | to_entries | 
+                map(.value.resource_schemas | to_entries | 
+                    map(select(.value.block.attributes != null)) | 
+                    map(select(.value.block.attributes | keys[] | test("^(?!has_).*_wo$"))) | 
+                    map({key: .key, value: (.value.block.attributes | keys[] | select(test("^(?!has_).*_wo$")))})) | 
+                flatten | map({key: .key, value: .value}) | from_entries' \
+            > ../../data/write-only/gen_write_only.json
+
+      - name: Combine JSON files into ephemerality.json
+        run: |
+          echo "Combining generated files into ephemerality.json..."
+          
+          # Extract arrays and objects from source files
+          EPHEMERAL_ARRAY=$(jq -r '.ephemeral' data/ephemeral/gen_schema_ephemerals.json)
+          RESOURCES_ARRAY=$(jq -r '.resources' data/ephemeral/manual_resources.json)
+          WRITE_ONLY_OBJECT=$(jq -r '.' data/write-only/gen_write_only.json)
+          
+          # Combine into final structure with sorted arrays
+          jq -n \
+            --argjson ephemeral "$EPHEMERAL_ARRAY" \
+            --argjson resources "$RESOURCES_ARRAY" \
+            --argjson write_only "$WRITE_ONLY_OBJECT" \
+            '{
+              ephemeral: ($ephemeral | sort),
+              resources: ($resources | sort),
+              write_only: $write_only
+            }' > data/ephemerality.json
+          
+          echo "Combined ephemerality.json created with:"
+          echo "- Ephemeral resources: $(jq '.ephemeral | length' data/ephemerality.json)"
+          echo "- Manual resources: $(jq '.resources | length' data/ephemerality.json)"
+          echo "- Write-only attributes: $(jq '.write_only | keys | length' data/ephemerality.json)"
+
+      - name: Check for changes and determine action
+        id: changes
+        run: |
+          if [[ -z $(git status --porcelain) ]]; then
+            echo "change_type=none" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          elif [[ -z $(git status --porcelain | grep "^[DR]") ]]; then
+            echo "change_type=additions" >> $GITHUB_OUTPUT
+            echo "New resources added"
+          else
+            echo "change_type=deletions" >> $GITHUB_OUTPUT
+            echo "Deletions detected - requires review"
+          fi
+
+      - name: Commit and push changes
+        if: steps.changes.outputs.change_type != 'none'
+        run: |
+          git add ./data/
+          git commit -m "robot: update list of ephemeral resources
+          
+          - Generated ephemeral resources: $(jq '.ephemeral | length' data/ephemerality.json) entries
+          - Manual resources: $(jq '.resources | length' data/ephemerality.json) entries  
+          - Generated write-only resources: $(jq '.write_only | keys | length' data/ephemerality.json) entries
+          - Change type: ${{ steps.changes.outputs.change_type }}
+          - Combined into ephemerality.json"
+          git push
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.change_type != 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_TITLE="Update ephemeral resources (${{ steps.changes.outputs.change_type }})"
+          PR_BODY="## Automated Resource Update
+          
+          This PR was automatically generated to update the ephemeral and write-only resource definitions.
+          
+          **Change Type:** ${{ steps.changes.outputs.change_type }}
+          **Generated Files:**
+          - \`data/ephemeral/gen_schema_ephemerals.json\`
+          - \`data/write-only/gen_write_only.json\`
+          - \`data/ephemerality.json\` (combined file)
+          
+          **Resource Counts:**
+          - Ephemeral resources: $(jq '.ephemeral | length' data/ephemerality.json)
+          - Manual resources: $(jq '.resources | length' data/ephemerality.json)
+          - Write-only attributes: $(jq '.write_only | keys | length' data/ephemerality.json)
+          
+          **Terraform Version:** ${{ env.TERRAFORM_VERSION }}
+          **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          ${{ steps.changes.outputs.change_type == 'deletions' && '⚠️ **Review Required:** This PR contains deletions and should be reviewed before merging.' || '✅ **Safe to Merge:** This PR only contains additions.' }}"
+          
+          gh pr create \
+            --base main \
+            --head "${{ steps.branch.outputs.branch_name }}" \
+            --title "${PR_TITLE}" \
+            --body "${PR_BODY}" \
+            --label "automated" \
+            ${{ steps.changes.outputs.change_type == 'additions' && '--label "auto-merge"' || '--label "needs-review"' }}
+
