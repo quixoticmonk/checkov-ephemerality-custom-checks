@@ -13,8 +13,7 @@ data_loader = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(data_loader)
 
 load_ephemerality_data = data_loader.load_ephemerality_data
-get_terraform_version_from_plan = data_loader.get_terraform_version_from_plan
-should_skip_check = data_loader.should_skip_check
+should_skip_ephemerality_check = data_loader.should_skip_ephemerality_check
 
 class PreferEphemeralRetrieves(BaseDataCheck):
     def __init__(self):
@@ -31,23 +30,23 @@ class PreferEphemeralRetrieves(BaseDataCheck):
         
         :param conf: The data source configuration
         :param data_type: The data source type (passed by Checkov)
-        :return: CheckResult.PASSED if the data source is not in the ephemeral list or if Terraform version < 1.11,
+        :return: CheckResult.PASSED if the data source is not in the ephemeral list or if Terraform version < 1.11.0,
                  CheckResult.FAILED otherwise
         """
-        # Try to get Terraform version from plan if available
-        terraform_version = None
+        # Check if we should skip this check due to Terraform version < 1.11.0
         try:
-            # This is a best effort attempt to get the Terraform version
-            # It may not always be available depending on how Checkov is run
+            # Try to get plan from runner_filter if available
+            plan_dict = None
             runner_filter = getattr(self, 'runner_filter', None)
             if runner_filter and hasattr(runner_filter, 'tf_plan_dict'):
-                terraform_version = get_terraform_version_from_plan(runner_filter.tf_plan_dict)
-        except Exception:
-            pass
+                plan_dict = runner_filter.tf_plan_dict
             
-        # Skip check for Terraform versions < 1.11
-        if terraform_version and should_skip_check(terraform_version):
-            return CheckResult.PASSED
+            # Skip check for Terraform versions < 1.11.0
+            if should_skip_ephemerality_check(plan_dict):
+                return CheckResult.PASSED
+        except Exception:
+            # If version checking fails, continue with the check
+            pass
             
         # Get data type from parameter or entity_type
         if data_type:
