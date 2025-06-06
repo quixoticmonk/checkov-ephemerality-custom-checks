@@ -1,6 +1,6 @@
 # Checkov custom checks: Ephemerality Checks
 
-[![Generate and Test](https://github.com/quixoticmonk/policy-library-ephemerality/actions/workflows/generate.yml/badge.svg)](https://github.com/quixoticmonk/policy-library-ephemerality/actions/workflows/generate.yml)
+[![Generate and Test](https://github.com/quixoticmonk/checkov-ephemerality-custom-checks/actions/workflows/generate.yml/badge.svg)](https://github.com/quixoticmonk/checkov-ephemerality-custom-checks/actions/workflows/generate.yml)
 
 This repository contains custom Checkov policies designed to enforce best practices around ephemeral resources and write-only attributes in Terraform configurations. These checks help identify opportunities to improve security and reduce state management complexity by preferring ephemeral data sources and write-only attributes where appropriate.
 
