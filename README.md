@@ -1,6 +1,6 @@
 # Checkov custom checks: Ephemerality Checks
 
-[![Generate and Test](https://github.com/quixoticmonk/checkov-ephemerality-custom-checks/actions/workflows/generate.yml/badge.svg)](https://github.com/quixoticmonk/checkov-ephemerality-custom-checks/actions/workflows/generate.yml)
+[![Generate](https://github.com/quixoticmonk/checkov-ephemerality-custom-checks/actions/workflows/generate.yml/badge.svg)](https://github.com/quixoticmonk/checkov-ephemerality-custom-checks/actions/workflows/generate.yml)
 
 This repository contains custom Checkov policies designed to enforce best practices around ephemeral resources and write-only attributes in Terraform configurations. These checks help identify opportunities to improve security and reduce state management complexity by preferring ephemeral data sources and write-only attributes where appropriate.
 
@@ -11,6 +11,12 @@ The Checkov custom checks includes three main categories of checks:
 1. **Ephemeral Creation Checks** - Identify resources that could be replaced with ephemeral data sources
 2. **Ephemeral Retrieval Checks** - Detect data sources that should be marked as ephemeral
 3. **Write-Only Attribute Checks** - Flag sensitive attributes that should be write-only
+
+## Terraform Version Compatibility
+
+**Important**: Ephemeral resources and write-only attributes are only fully supported in **Terraform versions below 1.11.0**. These checks are designed to work with Terraform configurations that target these earlier versions where ephemerality features are available.
+
+If you're using Terraform 1.11.0 or later, some of the ephemeral resource recommendations may not be applicable to your configuration.
 
 ## Checks Included
 
@@ -23,7 +29,7 @@ Detects data sources that retrieve sensitive or temporary information and recomm
 * CKV2_EPH_WO - Prefer Write-Only Attributes
 Flags sensitive resource attributes that should be configured as write-only to prevent them from being stored in or read from the Terraform state file.
 
-## Usage
+## Usage in this repo
 
 ### Running All Custom Checks
 You can also run the checks directly with Checkov:
@@ -74,9 +80,6 @@ This repository includes an automated workflow that:
 4. **Creates pull requests** automatically when changes are detected
 5. **Can be triggered manually** via GitHub Actions workflow dispatch
 
-### Manual Workflow Trigger
-You can manually trigger the generation workflow from the GitHub Actions tab or using the GitHub CLI:
-
 ## Requirements
 
 - Checkov
@@ -90,20 +93,15 @@ You can manually trigger the generation workflow from the GitHub Actions tab or 
 
 Or
 
-1. Run the checks using Checkov with the flag `--external-checks-git`. Use the checks reference since the examples in this main branch might lead to checkov identifying them as part of your configuration.
+Run the checkov command with the $TARGET_DIR replaced with your target directory.
 
-
-## Contributing
-
-When adding new checks or updating existing ones:
-
-1. **For new ephemeral resources**: Add them to `data/ephemeral/manual_resources.json`
-2. **For new write-only attributes**: The automated workflow will discover them, or add manually to the generated files
-3. **Add test cases** in `tests/` directory
-4. **Update documentation** as needed
-5. **Test your changes** with the provided test suite
-
-The `ephemerality.json` file is automatically regenerated, so don't edit it directly.
+```
+checkov -f "$TARGET_DIR/main.tf" \
+    --external-checks-git https://github.com/quixoticmonk/checkov-ephemerality-custom-checks.git \
+    --external-checks-dir checks \
+    --framework terraform \
+    --check CKV2_EPH_CREATE,CKV2_EPH_RET,CKV2_EPH_WO # only runs the checks listed in this repo
+```
 
 ## Credits
 
