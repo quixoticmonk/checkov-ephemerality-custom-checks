@@ -34,6 +34,16 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: |
+            generators/ephemeral_resources/.terraform
+            generators/ephemeral_resources/.terraform.lock.hcl
+          key: terraform-${{ env.TERRAFORM_VERSION }}-${{ hashFiles('generators/ephemeral_resources/providers.tf') }}
+          restore-keys: |
+            terraform-${{ env.TERRAFORM_VERSION }}-
+
       - name: Setup Git configuration
         run: |
           git config user.name "github-actions[bot]"
@@ -54,10 +64,47 @@ jobs:
       - name: Generate ephemeral and write-only resources
         working-directory: generators/ephemeral_resources
         run: |
-          echo "Generating ephemeral resources from providers..."
+          echo "Generating ephemeral resources from providers (excluding deprecated)..."
           terraform providers schema -json | \
-            jq '{"ephemeral": [.provider_schemas | to_entries[] | .value.ephemeral_resource_schemas? | select(.) | keys[] ]}' \
+            jq '{
+              "ephemeral": [
+                .provider_schemas | 
+                to_entries[] as $provider |
+                $provider.value.ephemeral_resource_schemas? |
+                select(.) |
+                to_entries[] |
+                select(
+                  (.value.block.deprecated? != true) and
+                  ((.value.block.description? // "" | test("deprecated|obsolete|removed"; "i")) | not)
+                ) |
+                .key
+              ]
+            }' \
             > ../../data/ephemeral/gen_schema_ephemerals.json
+          
+          echo "Generating list of deprecated ephemeral resources for reference..."
+          terraform providers schema -json | \
+            jq '{
+              "deprecated_ephemeral": [
+                .provider_schemas | 
+                to_entries[] as $provider |
+                $provider.value.ephemeral_resource_schemas? |
+                select(.) |
+                to_entries[] |
+                select(
+                  (.value.block.deprecated? == true) or
+                  ((.value.block.description? // "" | test("deprecated|obsolete|removed"; "i")))
+                ) |
+                {
+                  provider: $provider.key,
+                  resource: .key,
+                  deprecated: .value.block.deprecated?,
+                  deprecation_message: .value.block.deprecation_message?,
+                  reason: (if .value.block.deprecated? then "explicitly_deprecated" else "description_indicates_deprecated" end)
+                }
+              ]
+            }' \
+            > ../../data/ephemeral/deprecated_ephemerals.json
           
           echo "Generating write-only resources from providers..."
           terraform providers schema -json | \
@@ -90,7 +137,8 @@ jobs:
             }' > data/ephemerality.json
           
           echo "Combined ephemerality.json created with:"
-          echo "- Ephemeral resources: $(jq '.ephemeral | length' data/ephemerality.json)"
+          echo "- Ephemeral resources: $(jq '.ephemeral | length' data/ephemerality.json) (deprecated filtered out)"
+          echo "- Deprecated ephemeral resources: $(jq '.deprecated_ephemeral | length' data/ephemeral/deprecated_ephemerals.json) (tracked separately)"
           echo "- Manual resources: $(jq '.resources | length' data/ephemerality.json)"
           echo "- Write-only attributes: $(jq '.write_only | keys | length' data/ephemerality.json)"
 
@@ -117,6 +165,7 @@ jobs:
         run: |
           # Add all generated files explicitly
           git add data/ephemeral/gen_schema_ephemerals.json
+          git add data/ephemeral/deprecated_ephemerals.json
           git add data/write-only/gen_write_only.json
           git add data/ephemerality.json
           
@@ -124,15 +173,17 @@ jobs:
           echo "Files to be committed:"
           git diff --cached --name-only
           
-          git commit -m "robot: update list of ephemeral resources
+          git commit -m "robot: update list of ephemeral resources (excluding deprecated)
           
-          - Generated ephemeral resources: $(jq '.ephemeral | length' data/ephemerality.json) entries
+          - Generated ephemeral resources: $(jq '.ephemeral | length' data/ephemerality.json) entries (deprecated filtered out)
+          - Deprecated ephemeral resources: $(jq '.deprecated_ephemeral | length' data/ephemeral/deprecated_ephemerals.json) entries (for reference)
           - Manual resources: $(jq '.resources | length' data/ephemerality.json) entries  
           - Generated write-only resources: $(jq '.write_only | keys | length' data/ephemerality.json) entries
           - Change type: ${{ steps.changes.outputs.change_type }}
           
           Files updated:
-          - data/ephemeral/gen_schema_ephemerals.json
+          - data/ephemeral/gen_schema_ephemerals.json (non-deprecated only)
+          - data/ephemeral/deprecated_ephemerals.json (deprecated resources for reference)
           - data/write-only/gen_write_only.json
           - data/ephemerality.json (combined)"
           git push
@@ -149,14 +200,21 @@ jobs:
           
           **Change Type:** ${{ steps.changes.outputs.change_type }}
           **Generated Files:**
-          - \`data/ephemeral/gen_schema_ephemerals.json\`
+          - \`data/ephemeral/gen_schema_ephemerals.json\` (non-deprecated resources only)
+          - \`data/ephemeral/deprecated_ephemerals.json\` (deprecated resources for reference)
           - \`data/write-only/gen_write_only.json\`
           - \`data/ephemerality.json\` (combined file)
           
           **Resource Counts:**
-          - Ephemeral resources: $(jq '.ephemeral | length' data/ephemerality.json)
+          - Ephemeral resources: $(jq '.ephemeral | length' data/ephemerality.json) (deprecated filtered out)
+          - Deprecated ephemeral resources: $(jq '.deprecated_ephemeral | length' data/ephemeral/deprecated_ephemerals.json) (for reference)
           - Manual resources: $(jq '.resources | length' data/ephemerality.json)
           - Write-only attributes: $(jq '.write_only | keys | length' data/ephemerality.json)
+          
+          **Deprecation Filtering:**
+          - Resources marked with \`deprecated: true\` are excluded
+          - Resources with descriptions containing 'deprecated', 'obsolete', or 'removed' are excluded
+          - Deprecated resources are tracked separately in \`deprecated_ephemerals.json\`
           
           **Terraform Version:** ${{ env.TERRAFORM_VERSION }}
           **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
