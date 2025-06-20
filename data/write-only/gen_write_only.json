@@ -14,6 +14,8 @@
   "azurerm_postgresql_server": "administrator_login_password_wo",
   "google_secret_manager_secret_version": "secret_data_wo",
   "google_sql_user": "password_wo",
+  "kubernetes_secret": "data_wo",
+  "kubernetes_secret_v1": "data_wo",
   "tfe_notification_configuration": "token_wo",
   "tfe_organization_run_task": "hmac_key_wo",
   "tfe_policy_set_parameter": "value_wo",
