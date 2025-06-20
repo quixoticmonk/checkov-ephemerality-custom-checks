@@ -13,6 +13,8 @@
     "google_service_account_id_token",
     "google_service_account_jwt",
     "google_service_account_key",
+    "kubernetes_certificate_signing_request_v1",
+    "kubernetes_token_request_v1",
     "random_password",
     "tfe_agent_token",
     "tfe_audit_trail_token",
