@@ -2,8 +2,8 @@ name: Generate
 
 on:
   schedule:
-     # Trigger the workflow every day at 4:00 UTC.
-     - cron: '0 4 * * *'
+     # Trigger the workflow every Friday at 4:00 UTC.
+     - cron: '0 4 * * 5'
   push:
     branches:
       - main
