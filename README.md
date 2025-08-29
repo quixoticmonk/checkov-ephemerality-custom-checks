@@ -17,6 +17,7 @@ The Checkov custom checks includes three main categories of checks:
 AWS access key ="manu"
 AWS Secret key ="manu124"
 
+
 ## Terraform Version Compatibility
 
 **Important**: Ephemeral resources and write-only attributes are only fully supported in **Terraform versions below 1.11.0**. These checks are designed to work with Terraform configurations that target these earlier versions where ephemerality features are available.
