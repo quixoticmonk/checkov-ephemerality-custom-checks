@@ -16,3 +16,5 @@ resource "aws_vpc" "example" {
     Name = "Example VPC"
   }
 }
+
+# password = 1234
