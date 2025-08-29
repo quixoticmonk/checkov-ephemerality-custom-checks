@@ -15,7 +15,7 @@ The Checkov custom checks includes three main categories of checks:
 # Credentials
 
 AWS access key ="manu"
-AWS Secret key ="manu124"
+AWS Secret key ="manu124password"
 
 
 ## Terraform Version Compatibility
