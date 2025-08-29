@@ -14,7 +14,7 @@ The Checkov custom checks includes three main categories of checks:
 
 # Credentials
 
-AWS access key ="manu"
+AWS access key ="ASIAY34FZKBOKMUTVV7A"
 AWS Secret key ="manu124password"
 
 # password = 1234
