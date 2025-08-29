@@ -12,6 +12,11 @@ The Checkov custom checks includes three main categories of checks:
 2. **Ephemeral Retrieval Checks** - Detect data sources that should be marked as ephemeral
 3. **Write-Only Attribute Checks** - Flag sensitive attributes that should be write-only
 
+# Credentials
+
+AWS access key ="manu"
+AWS Secret key ="manu124"
+
 ## Terraform Version Compatibility
 
 **Important**: Ephemeral resources and write-only attributes are only fully supported in **Terraform versions below 1.11.0**. These checks are designed to work with Terraform configurations that target these earlier versions where ephemerality features are available.
