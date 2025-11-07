@@ -9,6 +9,7 @@
     "aws_ssm_parameter",
     "azurerm_key_vault_certificate",
     "azurerm_key_vault_secret",
+    "google_secret_manager_secret_version",
     "google_service_account_access_token",
     "google_service_account_id_token",
     "google_service_account_jwt",
