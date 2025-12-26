@@ -9,6 +9,7 @@
     "aws_ssm_parameter",
     "azurerm_key_vault_certificate",
     "azurerm_key_vault_secret",
+    "google_client_config",
     "google_secret_manager_secret_version",
     "google_service_account_access_token",
     "google_service_account_id_token",
@@ -20,6 +21,7 @@
     "tfe_outputs",
     "tfe_team_token",
     "tls_private_key",
+    "vault_azure_static_credentials",
     "vault_database_secret",
     "vault_kv_secret_v2"
   ]
